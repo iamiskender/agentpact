@@ -35,7 +35,7 @@ const TESTNET: NetworkConfig = {
     import.meta.env.VITE_CONTRACT_ADDRESS_TESTNET ?? '0x1c107518808eb351a32f02a08c6ecf154db4997e'
   ) as `0x${string}`,
   deployBlock: BigInt(
-    String(import.meta.env.VITE_DEPLOY_BLOCK_TESTNET ?? '0')
+    String(import.meta.env.VITE_DEPLOY_BLOCK_TESTNET ?? '68067760')
   ),
 };
 

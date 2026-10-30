@@ -8,8 +8,8 @@
  * The wagmi config in config.ts uses the same URL lists.
  */
 
-import { createPublicClient, fallback, http, defineChain } from 'viem';
-import type { AbiEvent, Log } from 'viem';
+import { createPublicClient, fallback, http, custom, defineChain } from 'viem';
+import type { AbiEvent, Log, Transport } from 'viem';
 import { NETWORK } from '@/networks';
 
 // ── RPC URL lists ────────────────────────────────────────────────────────────
@@ -30,12 +30,6 @@ export const TESTNET_RPC_URLS = [
 export const ACTIVE_RPC_URLS: readonly string[] =
   NETWORK.chainId === 5042 ? MAINNET_RPC_URLS : TESTNET_RPC_URLS;
 
-// ── Transport ────────────────────────────────────────────────────────────────
-
-export const arcFallbackTransport = fallback(
-  ACTIVE_RPC_URLS.map(url => http(url)),
-);
-
 // ── Chain definition ─────────────────────────────────────────────────────────
 
 const arcChain = defineChain({
@@ -52,9 +46,15 @@ const arcChain = defineChain({
 export type ArcPublicClient = ReturnType<typeof makePublicClient>;
 
 export function makePublicClient() {
+  // If a browser wallet is present, add it as the last fallback so reads
+  // succeed even when all *.arc.io RPC URLs are blocked by an ad blocker.
+  const transports: Transport[] = [...ACTIVE_RPC_URLS.map(url => http(url))];
+  if (typeof window !== 'undefined' && window.ethereum) {
+    transports.push(custom(window.ethereum));
+  }
   return createPublicClient({
     chain: arcChain,
-    transport: arcFallbackTransport,
+    transport: fallback(transports),
   });
 }
 

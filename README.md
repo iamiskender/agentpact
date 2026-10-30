@@ -67,7 +67,7 @@ Copy `.env.example` (if present) or create `.env` at the project root:
 | `VITE_NETWORK` | `testnet` or `mainnet` (default: `testnet`) |
 | `VITE_CONTRACT_ADDRESS_TESTNET` | AgentPact address on Arc Testnet |
 | `VITE_CONTRACT_ADDRESS_MAINNET` | AgentPact address on Arc Mainnet |
-| `VITE_DEPLOY_BLOCK_TESTNET` | First block to query for testnet events (default: `0`) |
+| `VITE_DEPLOY_BLOCK_TESTNET` | First block to query for testnet events (default: `68067760`) |
 | `VITE_DEPLOY_BLOCK_MAINNET` | First block to query for mainnet events (default: `28694500`) |
 | `RPC_PROXY_BASE_URL` | Optional — provided by Arc Studio, not needed outside it |
 

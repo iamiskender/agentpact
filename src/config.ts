@@ -6,7 +6,7 @@
  * Built with Arc Studio — https://studio.arc.io
  */
 
-import { http, createConfig, fallback } from 'wagmi'
+import { http, createConfig, fallback, unstable_connector } from 'wagmi'
 import { mainnet } from 'wagmi/chains'
 import { defineChain } from 'viem'
 import { injected } from 'wagmi/connectors'
@@ -40,8 +40,8 @@ export const config = createConfig({
   chains: [arcTestnet, arcMainnet, mainnet],
   connectors: [injected()],
   transports: {
-    [arcTestnet.id]: fallback(TESTNET_RPC_URLS.map(u => http(u))),
-    [arcMainnet.id]: fallback(MAINNET_RPC_URLS.map(u => http(u))),
+    [arcTestnet.id]: fallback([...TESTNET_RPC_URLS.map(u => http(u)), unstable_connector(injected)]),
+    [arcMainnet.id]: fallback([...MAINNET_RPC_URLS.map(u => http(u)), unstable_connector(injected)]),
     [mainnet.id]: http(), // ENS resolution only
   },
 })

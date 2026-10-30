@@ -59,19 +59,15 @@ export function ActivityFeed({ refreshTick }: { refreshTick: number }) {
       setLoading(true);
       setError(null);
       try {
-        const latest = await publicClient.getBlockNumber();
-        // Show the most recent 2000 blocks, but never before the deploy block
-        const from = latest > 2000n
-          ? (latest - 2000n > DEPLOY_BLOCK ? latest - 2000n : DEPLOY_BLOCK)
-          : DEPLOY_BLOCK;
+        const toBlock = await publicClient.getBlockNumber();
 
         const logs = await Promise.all(
           EVENT_ABIS.map(abi =>
             getLogsChunked(publicClient, {
               address: AGENT_PACT.address,
               event: abi,
-              fromBlock: from,
-              toBlock: latest,
+              fromBlock: DEPLOY_BLOCK,
+              toBlock,
             }).catch(() => [] as [])
           )
         );
@@ -125,7 +121,7 @@ export function ActivityFeed({ refreshTick }: { refreshTick: number }) {
           </h2>
         </div>
         <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>
-          Last 2000 blocks · {NETWORK.name}
+          Since deployment · {NETWORK.name}
         </p>
       </CardHeader>
       <CardBody>
@@ -139,7 +135,7 @@ export function ActivityFeed({ refreshTick }: { refreshTick: number }) {
         )}
         {!loading && !error && events.length === 0 && (
           <p className="text-sm text-center py-4" style={{ color: 'var(--muted)' }}>
-            No activity in the last 2000 blocks.
+            No activity yet.
           </p>
         )}
         {!loading && events.length > 0 && (

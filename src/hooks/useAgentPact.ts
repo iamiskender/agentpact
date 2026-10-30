@@ -2,12 +2,12 @@ import {
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
-  usePublicClient,
 } from 'wagmi';
 import { erc20Abi, parseUnits, parseAbiItem } from 'viem';
-import { AGENT_PACT, USDC_FACT, CHAIN_ID } from '@/contract';
+import { AGENT_PACT, USDC_FACT, CHAIN_ID, DEPLOY_BLOCK } from '@/contract';
 import type { JobData } from '@/contract';
 import { useState, useEffect } from 'react';
+import { makePublicClient, getLogsChunked } from '@/rpc';
 
 export function useJob(jobId: bigint | undefined) {
   return useReadContract({
@@ -113,44 +113,51 @@ export function parseUsdcInput(val: string): bigint {
   return parseUnits(val.trim() || '0', 6);
 }
 
+const JOB_RESOLVED_EVENT = parseAbiItem(
+  'event JobResolved(uint256 indexed jobId, uint256 providerBps, uint256 providerAmount, uint256 clientAmount)'
+);
+
+// Lazily create a shared client for one-off reads in hooks.
+// (wagmi's usePublicClient requires the chainId to be in the wagmi config;
+// makePublicClient() uses the fallback transport and is always correct.)
+const _hooksPublicClient = makePublicClient();
+
 // Fetch the JobResolved event for a specific jobId to get the exact split amounts.
+// Queries from the contract deploy block in chunks to avoid RPC log-range limits.
 // Returns { providerAmount, clientAmount } or null if not yet found.
 export function useJobResolvedAmounts(
   jobId: bigint | undefined,
   enabled: boolean,
 ): { providerAmount: bigint; clientAmount: bigint } | null {
-  const publicClient = usePublicClient({ chainId: CHAIN_ID });
   const [amounts, setAmounts] = useState<{ providerAmount: bigint; clientAmount: bigint } | null>(null);
 
   useEffect(() => {
-    if (!enabled || jobId === undefined || !publicClient) return;
+    if (!enabled || jobId === undefined) return;
     let cancelled = false;
 
-    const JOB_RESOLVED_EVENT = parseAbiItem(
-      'event JobResolved(uint256 indexed jobId, uint256 providerBps, uint256 providerAmount, uint256 clientAmount)'
-    );
-
-    publicClient
-      .getLogs({
+    async function fetch() {
+      const latest = await _hooksPublicClient.getBlockNumber();
+      const logs = await getLogsChunked(_hooksPublicClient, {
         address: AGENT_PACT.address,
         event: JOB_RESOLVED_EVENT,
         args: { jobId },
-        fromBlock: 0n,
-        toBlock: 'latest',
-      })
-      .then(logs => {
-        if (cancelled) return;
-        const last = logs.length > 0 ? logs[logs.length - 1] : undefined;
-        const pa = last?.args?.providerAmount;
-        const ca = last?.args?.clientAmount;
-        if (pa !== undefined && ca !== undefined) {
-          setAmounts({ providerAmount: pa, clientAmount: ca });
-        }
-      })
-      .catch(() => { /* silently ignore — falls back to "Split by arbiter" */ });
+        fromBlock: DEPLOY_BLOCK,
+        toBlock: latest,
+      });
+      if (cancelled) return;
+      const last = logs.length > 0 ? logs[logs.length - 1] : undefined;
+      const lastArgs = last?.args;
+      const pa = lastArgs?.providerAmount;
+      const ca = lastArgs?.clientAmount;
+      if (pa !== undefined && ca !== undefined) {
+        setAmounts({ providerAmount: pa, clientAmount: ca });
+      }
+    }
+
+    fetch().catch(() => { /* silently ignore — falls back to "Split by arbiter" */ });
 
     return () => { cancelled = true; };
-  }, [jobId, enabled, publicClient]);
+  }, [jobId, enabled]);
 
   return amounts;
 }

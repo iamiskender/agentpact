@@ -18,10 +18,11 @@ export const IS_MAINNET = ACTIVE_NETWORK === 'mainnet';
 interface NetworkConfig {
   name: string;
   chainId: number;
-  rpcUrl: string;
+  rpcUrl: string;           // primary RPC (fallbacks live in src/rpc.ts)
   explorerBase: string;
   usdcAddress: `0x${string}`;
   contractAddress: `0x${string}`;
+  deployBlock: bigint;      // first block to query for contract events
 }
 
 const TESTNET: NetworkConfig = {
@@ -33,6 +34,9 @@ const TESTNET: NetworkConfig = {
   contractAddress: (
     import.meta.env.VITE_CONTRACT_ADDRESS_TESTNET ?? '0x1c107518808eb351a32f02a08c6ecf154db4997e'
   ) as `0x${string}`,
+  deployBlock: BigInt(
+    String(import.meta.env.VITE_DEPLOY_BLOCK_TESTNET ?? '0')
+  ),
 };
 
 const MAINNET: NetworkConfig = {
@@ -44,6 +48,9 @@ const MAINNET: NetworkConfig = {
   contractAddress: (
     import.meta.env.VITE_CONTRACT_ADDRESS_MAINNET ?? ''
   ) as `0x${string}`,
+  deployBlock: BigInt(
+    String(import.meta.env.VITE_DEPLOY_BLOCK_MAINNET ?? '28694500')
+  ),
 };
 
 export const NETWORK = ACTIVE_NETWORK === 'mainnet' ? MAINNET : TESTNET;
@@ -52,6 +59,7 @@ export const NETWORK = ACTIVE_NETWORK === 'mainnet' ? MAINNET : TESTNET;
 
 export const CHAIN_ID = NETWORK.chainId;
 export const EXPLORER_BASE = NETWORK.explorerBase;
+export const DEPLOY_BLOCK = NETWORK.deployBlock;
 
 export const AGENT_PACT = {
   address: NETWORK.contractAddress,

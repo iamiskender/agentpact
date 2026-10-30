@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
-import { createPublicClient, http, parseAbiItem } from 'viem';
+import { parseAbiItem } from 'viem';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
-import { AGENT_PACT, explorerTx } from '@/contract';
+import { AGENT_PACT, DEPLOY_BLOCK, explorerTx } from '@/contract';
 import { NETWORK } from '@/networks';
+import { makePublicClient, getLogsChunked } from '@/rpc';
 import { formatAddress } from '@/utils/format';
 import { ExternalLink, Activity, Loader2 } from 'lucide-react';
 
-const publicClient = createPublicClient({
-  transport: http(NETWORK.rpcUrl),
-});
+const publicClient = makePublicClient();
 
 const EVENT_ABIS = [
   parseAbiItem('event JobCreated(uint256 indexed jobId, address indexed client, address indexed provider, address arbiter, uint256 amount, uint256 deliveryDeadline, uint256 reviewPeriod, bytes32 specHash)'),
@@ -61,21 +60,29 @@ export function ActivityFeed({ refreshTick }: { refreshTick: number }) {
       setError(null);
       try {
         const latest = await publicClient.getBlockNumber();
-        const from = latest > 2000n ? latest - 2000n : 0n;
+        // Show the most recent 2000 blocks, but never before the deploy block
+        const from = latest > 2000n
+          ? (latest - 2000n > DEPLOY_BLOCK ? latest - 2000n : DEPLOY_BLOCK)
+          : DEPLOY_BLOCK;
 
         const logs = await Promise.all(
           EVENT_ABIS.map(abi =>
-            publicClient.getLogs({
+            getLogsChunked(publicClient, {
               address: AGENT_PACT.address,
               event: abi,
               fromBlock: from,
-              toBlock: 'latest',
-            }).catch(() => [])
+              toBlock: latest,
+            }).catch(() => [] as [])
           )
         );
 
-        const flat: FeedEvent[] = logs.flat().map(entry => {
-          const args = entry.args as Record<string, unknown>;
+        const flat: FeedEvent[] = (logs.flat() as unknown as Array<{
+          transactionHash: string | null;
+          blockNumber: bigint | null;
+          eventName?: string;
+          args: Record<string, unknown>;
+        }>).map(entry => {
+          const args = entry.args;
           const rawJobId = args?.jobId;
           const jobId = typeof rawJobId === 'bigint'
             ? rawJobId.toString()
@@ -118,7 +125,7 @@ export function ActivityFeed({ refreshTick }: { refreshTick: number }) {
           </h2>
         </div>
         <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>
-          Last 2000 blocks on Arc Testnet
+          Last 2000 blocks · {NETWORK.name}
         </p>
       </CardHeader>
       <CardBody>

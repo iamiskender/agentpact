@@ -1,17 +1,14 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useAccount } from 'wagmi';
-import { createPublicClient, http } from 'viem';
 import { JobCard } from '@/components/JobCard';
 import { AGENT_PACT } from '@/contract';
-import { NETWORK } from '@/networks';
+import { makePublicClient } from '@/rpc';
 import { parseJobTuple } from '@/hooks/useAgentPact';
 import type { JobData } from '@/contract';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
-const publicClient = createPublicClient({
-  transport: http(NETWORK.rpcUrl),
-});
+const publicClient = makePublicClient();
 
 interface Props {
   refreshTick: number;

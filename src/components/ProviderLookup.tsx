@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { createPublicClient, http } from 'viem';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AGENT_PACT } from '@/contract';
-import { NETWORK } from '@/networks';
+import { makePublicClient } from '@/rpc';
 import { formatUsdc } from '@/utils/format';
 import { Search, Award } from 'lucide-react';
 
-const publicClient = createPublicClient({ transport: http(NETWORK.rpcUrl) });
+const publicClient = makePublicClient();
 
 interface ProviderStats {
   completed: bigint;

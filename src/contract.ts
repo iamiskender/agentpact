@@ -8,6 +8,7 @@ export {
   AGENT_PACT,
   USDC_ADDRESS,
   CHAIN_ID,
+  DEPLOY_BLOCK,
   EXPLORER_BASE,
   explorerTx,
   explorerAddr,
